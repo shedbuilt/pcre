@@ -1,6 +1,9 @@
 #!/bin/bash
+declare -A SHED_PKG_LOCAL_OPTIONS=${SHED_PKG_OPTIONS_ASSOC}
+SHED_PKG_LOCAL_DOCDIR="/usr/share/doc/${SHED_PKG_NAME}-${SHED_PKG_VERSION}"
+# Configure
 ./configure --prefix=/usr                     \
-            --docdir=/usr/share/doc/pcre-8.41 \
+            --docdir="$SHED_PKG_LOCAL_DOCDIR" \
             --enable-unicode-properties       \
             --enable-pcre16                   \
             --enable-pcre32                   \
@@ -8,9 +11,15 @@
             --enable-pcregrep-libbz2          \
             --enable-pcretest-libreadline     \
             --enable-jit                      \
-            --disable-static && \
-make -j $SHED_NUM_JOBS && \
-make DESTDIR="$SHED_FAKE_ROOT" install || exit 1
-mkdir -v "${SHED_FAKE_ROOT}/lib"
-mv -v "${SHED_FAKE_ROOT}"/usr/lib/libpcre.so.* "${SHED_FAKE_ROOT}/lib"
-ln -sfv ../../lib/$(readlink "${SHED_FAKE_ROOT}"/usr/lib/libpcre.so) "${SHED_FAKE_ROOT}/usr/lib/libpcre.so"
+            --disable-static &&
+# Build and Install
+make -j $SHED_NUM_JOBS &&
+make DESTDIR="$SHED_FAKE_ROOT" install &&
+# Rearrange
+mkdir -v "${SHED_FAKE_ROOT}/lib" &&
+mv -v "${SHED_FAKE_ROOT}"/usr/lib/libpcre.so.* "${SHED_FAKE_ROOT}/lib" &&
+ln -sfv ../../lib/$(readlink "${SHED_FAKE_ROOT}/usr/lib/libpcre.so") "${SHED_FAKE_ROOT}/usr/lib/libpcre.so" || exit 1
+# Optionally Remove Documentation
+if [ -z "${SHED_PKG_LOCAL_OPTIONS[docs]}" ]; then
+    rm -rf "${SHED_FAKE_ROOT}/usr/share/doc"
+fi
